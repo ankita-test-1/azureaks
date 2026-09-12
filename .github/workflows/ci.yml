@@ -40,14 +40,7 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Login to Azure Container Registry
-        run: |
-          ACR_TOKEN=$(az acr login --name ${{ env.ACR_NAME }} --expose-token --output tsv --query accessToken)
-          docker login ${{ env.ACR_NAME }}.azurecr.io \
-            --username 00000000-0000-0000-0000-000000000000 \
-            --password-stdin <<< "$ACR_TOKEN"
-
-      - name: Build Docker Image
+      - name: Build and Push via ACR
         run: |
           if [ "${{ matrix.service }}" == "frontend" ]; then
             BUILD_PATH="projects/boutique-microservices/frontend"
@@ -57,14 +50,7 @@ jobs:
 
           echo "Building from $BUILD_PATH"
 
-          docker build \
-            -t ${{ env.ACR_NAME }}.azurecr.io/${{ matrix.service }}:${{ env.IMAGE_TAG }} \
+          az acr build \
+            --registry ${{ env.ACR_NAME }} \
+            --image ${{ matrix.service }}:${{ env.IMAGE_TAG }} \
             $BUILD_PATH
-
-      - name: Push Docker Image
-        run: |
-          IMAGE_URI=${{ env.ACR_NAME }}.azurecr.io/${{ matrix.service }}:${{ env.IMAGE_TAG }}
-          echo "Pushing $IMAGE_URI"
-          docker push $IMAGE_URI
-
- 
