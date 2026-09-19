@@ -36,7 +36,8 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "1.9.8"
+          terraform_version: "1.8.0"
+          terraform_wrapper: false
 
       - name: Terraform Init
         working-directory: ${{ env.TF_DIR }}
@@ -45,7 +46,14 @@ jobs:
       - name: Terraform Apply
         if: ${{ inputs.action == 'apply' }}
         working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve | tee apply.log
+
+      - name: Upload apply log
+        if: ${{ inputs.action == 'apply' && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-apply-log
+          path: ${{ env.TF_DIR }}/apply.log        
 
       - name: Bootstrap ArgoCD + monitoring (private-cluster-safe)
         if: ${{ inputs.action == 'apply' }}
