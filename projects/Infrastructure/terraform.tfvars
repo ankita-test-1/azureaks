@@ -1,3 +1,4 @@
+subscription_id     = "19956185-59a5-4243-b32d-572e96134d6e"
 location            = "eastus"
 resource_group_name = "aks-demo-rg"
 
