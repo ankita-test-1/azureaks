@@ -69,7 +69,14 @@ provider "helm" {
   }
 }
 
+variable "bootstrap_argocd_via_terraform" {
+  description = "true if applying from something with direct VNet access (VPN/bastion/self-hosted runner in the VNet). false = bootstrap via az aks command invoke in CI instead."
+  type        = bool
+  default     = false
+}
+
 module "argocd" {
+  count  = var.bootstrap_argocd_via_terraform ? 1 : 0
   source = "./modules/argocd"
 
   providers = {
