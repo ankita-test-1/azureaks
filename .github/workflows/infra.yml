@@ -1,0 +1,72 @@
+name: Infra Up/Down
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "apply or destroy"
+        required: true
+        type: choice
+        options: [apply, destroy]
+        default: apply
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ARM_CLIENT_ID: 36572c9f-4e5c-4efb-bb7b-db64021e4dc0
+  ARM_TENANT_ID: 89829357-4296-4e69-b714-fffa2fa6d8b1
+  ARM_SUBSCRIPTION_ID: 19956185-59a5-4243-b32d-572e96134d6e
+  ARM_USE_OIDC: true
+  TF_DIR: projects/Infrastructure
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.ARM_CLIENT_ID }}
+          tenant-id: ${{ env.ARM_TENANT_ID }}
+          subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init
+
+      - name: Terraform Apply
+        if: ${{ inputs.action == 'apply' }}
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve
+
+      - name: Bootstrap ArgoCD + monitoring (private-cluster-safe)
+        if: ${{ inputs.action == 'apply' }}
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          RG=$(terraform output -raw resource_group_name)
+          CLUSTER=$(terraform output -raw cluster_name)
+
+          az aks command invoke \
+            --resource-group "$RG" \
+            --name "$CLUSTER" \
+            --file argocd-values.yaml --file monitoring-values.yaml \
+            --command "helm repo add argo https://argoproj.github.io/argo-helm && \
+                       helm repo add prometheus-community https://prometheus-community.github.io/helm-charts && \
+                       helm repo update && \
+                       kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f - && \
+                       kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f - && \
+                       helm upgrade --install argocd argo/argo-cd -n argocd -f argocd-values.yaml && \
+                       helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack -n monitoring -f monitoring-values.yaml --timeout 10m"
+
+      - name: Terraform Destroy
+        if: ${{ inputs.action == 'destroy' }}
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform destroy -auto-approve
