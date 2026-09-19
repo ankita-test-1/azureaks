@@ -1,0 +1,7 @@
+# argocd-values.yaml
+server:
+  service:
+    type: ClusterIP
+configs:
+  params:
+    server.insecure: true
