@@ -1,30 +1,17 @@
-region = "us-east-1"
-vpc_name = "EKS-Demo-VPC"
-vpc_cidr = "10.1.0.0/16"
+location            = "eastus"
+resource_group_name = "aks-demo-rg"
 
- subnets = [
-  {
-    name = "subnet-1"
-    cidr_block = "10.1.1.0/24"
-    availability_zone = "us-east-1a"
-  },
+vnet_name        = "aks-demo-vnet"
+address_space    = "10.1.0.0/16"
+node_subnet_cidr = "10.1.0.0/21" # generous even though overlay mode means pods don't consume it
+zones            = ["1", "2", "3"]
 
-  {
-    name = "subnet-2",
-    cidr_block = "10.1.2.0/24",
-    availability_zone = "us-east-1b"
-  },
-  {
-    name = "subnet-3",
-    cidr_block = "10.1.3.0/24",
-    availability_zone = "us-east-1c"
-  }
- ]
 
-cluster_name = "eks-cluster"
-node_group_name = "eks-node-group"
+cluster_name    = "aks-cluster"
+node_group_name = "aks-node-pool"
 
-instance_types = ["m7i-flex.large"]
+system_vm_size = "Standard_B2s"
+vm_size        = "Standard_D2s_v5"
 capacity_type  = "ON_DEMAND"
 
 desired_size = 1
@@ -32,6 +19,9 @@ min_size     = 1
 max_size     = 2
 
 disk_size = 30
+
+acr_name = "aksregistryshopping" # must be globally unique across all of Azure
+acr_sku  = "Standard"
 
 repositories = [
   "frontend",
