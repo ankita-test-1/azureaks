@@ -4,7 +4,7 @@ resource "azurerm_resource_group" "this" {
 }
 
 module "vnet" {
-  source = "./modules/vpc" # rename to ./modules/vnet whenever you do the folder renames
+  source = "./modules/vnet"
 
   vnet_name             = var.vnet_name
   location              = azurerm_resource_group.this.location
@@ -17,7 +17,7 @@ module "vnet" {
 }
 
 module "acr" {
-  source = "./modules/ecr" # rename to ./modules/acr whenever you do the folder renames
+  source = "./modules/acr"
 
   acr_name             = var.acr_name
   location             = azurerm_resource_group.this.location
@@ -27,7 +27,7 @@ module "acr" {
 }
 
 module "aks" {
-  source = "./modules/eks" # rename to ./modules/aks whenever you do the folder renames
+  source = "./modules/aks"
 
   cluster_name        = var.cluster_name
   location            = azurerm_resource_group.this.location
