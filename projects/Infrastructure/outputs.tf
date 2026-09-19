@@ -1,11 +1,17 @@
 output "cluster_name" {
-  value = module.eks.cluster_name
+  value = module.aks.cluster_name
 }
 
-output "cluster_endpoint" {
-  value = module.eks.cluster_endpoint
+# No public endpoint any more — this is a private cluster, reachable only
+# from inside the VNet.
+output "cluster_private_fqdn" {
+  value = module.aks.cluster_private_fqdn
 }
 
-output "ecr_urls" {
-  value = module.ecr.repository_urls
+output "acr_login_server" {
+  value = module.acr.acr_login_server
+}
+
+output "acr_urls" {
+  value = module.acr.repository_urls
 }
