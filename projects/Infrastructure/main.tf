@@ -12,8 +12,6 @@ module "vnet" {
   address_space         = var.address_space
   node_subnet_cidr      = var.node_subnet_cidr
   zones                 = var.zones
-  enable_bastion_subnet = var.enable_bastion_subnet
-  bastion_subnet_cidr   = var.bastion_subnet_cidr
 }
 
 module "acr" {
