@@ -17,9 +17,12 @@ terraform {
   }
 }
 
-provider "azurerm" {
-  features {}
-  # Can also come from the ARM_SUBSCRIPTION_ID env var / `az login` context
-  # instead — same pattern as the old AWS_PROFILE approach.
-  subscription_id = var.subscription_id
+terraform {
+  backend "azurerm" {
+    resource_group_name  = "tfstate-rg"
+    storage_account_name = "akslearntfstate"
+    container_name        = "tfstate"
+    key                    = "infrastructure.tfstate"
+    use_oidc               = true
+  }
 }
