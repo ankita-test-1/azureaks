@@ -1,67 +1,110 @@
-variable "region" {
-  description="The name of the region"
+variable "location" {
+  description = "Azure region, e.g. eastus"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "Resource group that will hold everything in this project"
+  type        = string
+}
+
+variable "subscription_id" {
+  description = "Leave null to fall back to ARM_SUBSCRIPTION_ID / az cli context"
+  type        = string
+  default     = null
+}
+
+# --- VNet ---
+
+variable "vnet_name" {
   type = string
 }
 
-variable "vpc_name" {
-  description = "VPC name"
-  type = string
+variable "address_space" {
+  description = "VNet CIDR, e.g. 10.1.0.0/16"
+  type        = string
 }
 
-variable "vpc_cidr" {
-  description = "VPC CIDR Value"
-  type = string
+variable "node_subnet_cidr" {
+  description = "CIDR for the AKS node subnet"
+  type        = string
 }
 
-variable "subnets" {
-  description = "List of subnets"
-  type = list(object({
-    name                      = string
-    cidr_block                = string
-    availability_zone         = string
-  }))
+variable "zones" {
+  description = "Availability zones used by the NAT Gateway and node pools"
+  type        = list(string)
+  default     = ["1", "2", "3"]
 }
 
+variable "enable_bastion_subnet" {
+  type    = bool
+  default = false
+}
+
+variable "bastion_subnet_cidr" {
+  type    = string
+  default = null
+}
+
+# --- AKS ---
 
 variable "cluster_name" {
-  description = "The name of the Kubernetes Cluster"
-  type = string
+  description = "Name of the AKS cluster"
+  type        = string
 }
 
 variable "node_group_name" {
+  description = "Name of the user node pool"
   type        = string
-  description = "EKS node group name"
 }
 
-variable "instance_types" {
-  type        = list(string)
-  description = "Instance types for worker nodes (t3.medium, t3.large)"
+variable "system_vm_size" {
+  type    = string
+  default = "Standard_B2s"
+}
+
+variable "vm_size" {
+  description = "VM size for the user node pool"
+  type        = string
 }
 
 variable "capacity_type" {
-  type        = string
   description = "ON_DEMAND or SPOT"
+  type        = string
+  default     = "ON_DEMAND"
 }
 
 variable "desired_size" {
-  type        = number
-  description = "Desired number of worker nodes"
+  type = number
 }
 
 variable "min_size" {
-  type        = number
-  description = "Minimum number of  worker nodes"
+  type = number
 }
 
 variable "max_size" {
-  type        = number
-  description = "Maximum number of worker nodes"
+  type = number
 }
 
 variable "disk_size" {
-  type        = number
+  type    = number
+  default = 30
+}
+
+# --- ACR ---
+
+variable "acr_name" {
+  description = "Globally unique registry name, alphanumeric only (no hyphens), 5-50 chars"
+  type        = string
+}
+
+variable "acr_sku" {
+  type    = string
+  default = "Standard"
 }
 
 variable "repositories" {
-  type = list(string)
+  description = "Logical list of repo names that will be pushed to the registry (informational only)"
+  type        = list(string)
+  default     = []
 }
