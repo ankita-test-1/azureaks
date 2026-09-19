@@ -48,18 +48,10 @@ module "aks" {
   depends_on = [module.vnet, module.acr]
 }
 
-provider "kubernetes" {
-  alias                  = "aks"
-  host                   = module.aks.kube_config.host
-  client_certificate     = base64decode(module.aks.kube_config.client_certificate)
-  client_key             = base64decode(module.aks.kube_config.client_key)
-  cluster_ca_certificate = base64decode(module.aks.kube_config.cluster_ca_certificate)
-}
-
 provider "helm" {
   alias = "aks"
 
-  kubernetes = {
+  kubernetes {
     host                   = module.aks.kube_config.host
     client_certificate     = base64decode(module.aks.kube_config.client_certificate)
     client_key             = base64decode(module.aks.kube_config.client_key)
