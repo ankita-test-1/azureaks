@@ -49,7 +49,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   network_profile {
     network_plugin      = "azure"
     network_plugin_mode = "overlay" # pods get IPs from an overlay CIDR, not the subnet
-    network_dataplane   = "cilium"  # Azure CNI powered by Cilium
+    network_data_plane   = "cilium"  # Azure CNI powered by Cilium
     outbound_type       = "userAssignedNATGateway" # matches the NAT Gateway from the vnet module
   }
 
