@@ -15,3 +15,7 @@ output "acr_login_server" {
 output "acr_urls" {
   value = module.acr.repository_urls
 }
+
+output "resource_group_name" {
+  value = azurerm_resource_group.this.name
+}
