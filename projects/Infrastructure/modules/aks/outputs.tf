@@ -13,8 +13,20 @@ output "cluster_private_fqdn" {
 }
 
 output "kube_config" {
-  value     = azurerm_kubernetes_cluster.aks.kube_config_raw
+  description = "Structured kube_config for feeding the root kubernetes/helm providers"
+  value = {
+    host                   = azurerm_kubernetes_cluster.aks.kube_config[0].host
+    client_certificate     = azurerm_kubernetes_cluster.aks.kube_config[0].client_certificate
+    client_key             = azurerm_kubernetes_cluster.aks.kube_config[0].client_key
+    cluster_ca_certificate = azurerm_kubernetes_cluster.aks.kube_config[0].cluster_ca_certificate
+  }
   sensitive = true
+}
+
+output "kube_config_raw" {
+  description = "Full kubeconfig YAML, e.g. for pulling down manually from a bastion"
+  value       = azurerm_kubernetes_cluster.aks.kube_config_raw
+  sensitive   = true
 }
 
 output "node_resource_group" {
