@@ -5,10 +5,10 @@ metadata:
   namespace: cert-store
 spec: 
   from:
-    -group: gateway.networking.k8s.io
-     kind: Gateway
-     namespace: boutique
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespace: boutique
   to:  
-    -group: ""
-     kind: Secret
-     namespace: boutique-tls-cert
+    - group: ""
+      kind: Secret
+      namespace: boutique-tls-cert
