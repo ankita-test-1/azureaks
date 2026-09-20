@@ -8,20 +8,23 @@ spec:
   infrastructure:
     annotations: service.beta.kubernetes/azure-load-balancer-internal: "true"
   listeners:
-    -name: http
-     protocol: HTTP
-     port: 80
-     hostname: aksboutique.
-    
-    -name: https
-     protocol: HTTPS
-     port: 443
-     hostname: aksboutique.
-     tls:
-       certificateRefs:
-         -kind: Secret
-          name: boutique-tls-cert
-     allowedRoutes:
-       namespaces:
-         from: Same
-    
+     - name: http
+       protocol: HTTP
+       port: 80
+       hostname: "internal.aksboutique.com"
+       allowedRoutes:   
+         namespaces: 
+           from: Same 
+      
+    -  name: https
+       protocol: HTTPS
+       port: 443
+       hostname: "internal.aksboutique.com"
+       tls:
+         certificateRefs:
+           - kind: Secret
+             name: boutique-tls-cert
+       allowedRoutes:
+         namespaces:
+           from: Same
+      
