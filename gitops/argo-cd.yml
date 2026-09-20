@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: 'https://github.com/ankita-test-1/azureaks.git'
     targetRevision: main
-    path: gitops
+    path: gitops/k8s
   destination:
     server: 'https://kubernetes.default.svc'
     namespace: boutique
