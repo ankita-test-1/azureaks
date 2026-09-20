@@ -5,21 +5,28 @@ metadata:
   namespace: boutique
 spec: 
   parentrefs:
-    -name: boutique-gateway
+    - name: boutique-gateway
   hostnames:
-    - "boutiques.domain.com"
+    - "aksboutique.com"
   rules:
-    -matches:
-       -path:
-         type: PathPrefix
-         value: /api
-    -backendRefs:
-       -name: gateway-service
-        port: 3001
-    -matches:
-       -path:
-         type: Exact
-         value: /metrics
-    -backendRefs:
-       -name: gateway-service
-        port: 3001        
+    - matches:
+       - path:
+           type: PathPrefix
+           value: /api
+    - backendRefs:
+       - name: gateway-service
+         port: 3001
+    - matches:
+       - path:
+           type: Exact
+           value: /metrics
+    - backendRefs:
+       - name: gateway-service
+         port: 3001    
+    - matches:
+       - path:
+           type: PathPrefix
+           value: /
+    - backendRefs:
+       - name: frontend-service
+         port: 3000        
