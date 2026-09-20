@@ -17,6 +17,11 @@ resources:
   - k8s/backend/user-service.yml
   - k8s/frontend/deployment.yml
   - k8s/grafana-dashboard.yml
+  - cilium/gateway-internal.yml
+  - cilium/gatewayclass.yml
+  - cilium/httproute-frontend.yml
+  - cilium/httproute-gateway-api.yml
+  - cilium/referencegrant-tls.yml
 
 configMapGenerator:
   - name: boutique-db-dump
