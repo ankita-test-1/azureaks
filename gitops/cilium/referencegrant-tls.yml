@@ -1,14 +1,14 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
   name: allow-boutique-gateway-to-ref-tls-cert
   namespace: cert-store
-spec: 
+spec:
   from:
     - group: gateway.networking.k8s.io
       kind: Gateway
       namespace: boutique
-  to:  
+  to:
     - group: ""
       kind: Secret
-      namespace: boutique-tls-cert
+      name: boutique-tls-cert
