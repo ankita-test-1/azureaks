@@ -16,7 +16,7 @@ spec:
          namespaces: 
            from: Same 
       
-    -  name: https
+     - name: https
        protocol: HTTPS
        port: 443
        hostname: "internal.aksboutique.com"
