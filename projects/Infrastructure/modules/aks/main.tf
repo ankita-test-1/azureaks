@@ -54,6 +54,11 @@ resource "azurerm_kubernetes_cluster" "aks" {
     outbound_type       = "userAssignedNATGateway" # matches the NAT Gateway from the vnet module
   }
 
+  depends_on= [
+    azurerm_role_assignment.aks_private_dns,
+    azurerm_role_assignment.aks_network,
+  ]
+
   lifecycle {
     ignore_changes = [default_node_pool[0].node_count]
   }
@@ -89,11 +94,17 @@ resource "azurerm_kubernetes_cluster_node_pool" "user" {
 
 # --- Role assignments the cluster needs ---
 
+resource "azurerm_user_managed_identity" "aks" {
+  name = "$(var.cluster_name)-identity"
+  location = var.location
+  resource_group_name = var.resource_group_name
+}
+
 # Lets the cluster identity write the API server's record into our zone.
 resource "azurerm_role_assignment" "aks_private_dns" {
   scope                = azurerm_private_dns_zone.aks.id
   role_definition_name = "Private DNS Zone Contributor"
-  principal_id         = azurerm_kubernetes_cluster.aks.identity[0].principal_id
+  principal_id         = azurerm_user_managed_identity.aks.principal_id
 }
 
 # Lets the cluster identity manage NICs/LB rules in the subnet we pre-wired
@@ -101,7 +112,7 @@ resource "azurerm_role_assignment" "aks_private_dns" {
 resource "azurerm_role_assignment" "aks_network" {
   scope                = var.node_subnet_id
   role_definition_name = "Network Contributor"
-  principal_id         = azurerm_kubernetes_cluster.aks.identity[0].principal_id
+  principal_id         = azurerm_user_managed_identity.aks.principal_id
 }
 
 # Lets nodes actually pull images — equivalent of the old ecr_policy attachment.
