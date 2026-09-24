@@ -31,6 +31,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   identity {
     type = "UserAssigned"
+    identity_ids = [azurerm_user_managed_identity.aks.id]
   }
 
   # System pool: critical add-ons only, nothing user-scheduled here.
