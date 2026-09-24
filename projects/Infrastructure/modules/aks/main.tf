@@ -30,7 +30,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   workload_identity_enabled = true
 
   identity {
-    type = "SystemAssigned"
+    type = "UserAssigned"
   }
 
   # System pool: critical add-ons only, nothing user-scheduled here.
