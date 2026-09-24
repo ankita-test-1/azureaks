@@ -51,7 +51,6 @@ resource "azurerm_nat_gateway" "nat" {
   location            = var.location
   resource_group_name = var.resource_group_name
   sku_name            = "Standard"
-  zones               = var.zones
 }
 
 resource "azurerm_nat_gateway_public_ip_association" "nat" {
