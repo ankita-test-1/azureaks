@@ -95,7 +95,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "user" {
 # --- Role assignments the cluster needs ---
 
 resource "azurerm_user_assigned_identity" "aks" {
-  name = "$(var.cluster_name)-identity"
+  name = "${var.cluster_name}-identity"
   location = var.location
   resource_group_name = var.resource_group_name
 }
