@@ -11,8 +11,8 @@ zones            = ["1", "2", "3"]
 cluster_name    = "aks-cluster"
 node_group_name = "userpool"
 
-system_vm_size = "Standard_B2s"
-vm_size        = "Standard_D2s_v5"
+system_vm_size = "Standard_D2als"
+vm_size        = "Standard_D2als_v7"
 capacity_type  = "ON_DEMAND"
 
 desired_size = 1
