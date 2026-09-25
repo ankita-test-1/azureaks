@@ -55,13 +55,51 @@ jobs:
           name: terraform-apply-log
           path: ${{ env.TF_DIR }}/apply.log        
 
-      - name: Bootstrap ArgoCD + monitoring (private-cluster-safe)
+      - name: Install Cilium via AKS node (no jumpbox)
         if: ${{ inputs.action == 'apply' }}
         working-directory: ${{ env.TF_DIR }}
         run: |
+          set -euo pipefail
           RG=$(terraform output -raw resource_group_name)
           CLUSTER=$(terraform output -raw cluster_name)
-
+          NRG=$(terraform output -raw node_resource_group)
+          # Pick the SYSTEM pool VMSS - it exists before the user pool settles.
+          VMSS=$(az vmss list -g "$NRG" --query "[?contains(name,'system')].name | [0]" -o tsv)
+          INSTANCE=$(az vmss list-instances -g "$NRG" -n "$VMSS" \
+                       --query "[0].instanceId" -o tsv)
+          echo "Bootstrapping via $VMSS instance $INSTANCE"
+          # `az aks get-credentials` is an ARM MANAGEMENT-PLANE call. It works
+          # from this runner even though the cluster is private - we just
+          # cannot USE the kubeconfig here, so we ship it to the node.
+          az aks get-credentials -g "$RG" -n "$CLUSTER" \
+            --admin --file ./admin.kubeconfig --overwrite-existing
+          # Inline the inputs rather than using --parameters, whose argv
+          # semantics for RunShellScript are fiddly.
+          {
+            echo "KUBECONFIG_B64='$(base64 -w0 ./admin.kubeconfig)'"
+            echo "VALUES_B64='$(base64 -w0 cilium-values.yaml)'"
+            cat bootstrap-cilium-node.sh
+          } > ./run-on-node.sh
+          az vmss run-command invoke \
+            -g "$NRG" -n "$VMSS" --instance-id "$INSTANCE" \
+            --command-id RunShellScript \
+            --scripts @./run-on-node.sh \
+            -o json | tee run-command-output.json
+          rm -f ./admin.kubeconfig ./run-on-node.sh
+          # run-command returns exit code 0 even when the SCRIPT failed.
+          # Fail the step explicitly on the sentinel.
+          grep -q "DONE: Cilium installed" run-command-output.json \
+            || { echo "Bootstrap script failed - see output above"; exit 1; }
+   
+      # Cluster now has a working CNI, so pods can schedule and the normal
+      # `command invoke` path is available again.
+      - name: Bootstrap ArgoCD + monitoring
+        if: ${{ inputs.action == 'apply' }}
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          set -euo pipefail
+          RG=$(terraform output -raw resource_group_name)
+          CLUSTER=$(terraform output -raw cluster_name)
           az aks command invoke \
             --resource-group "$RG" \
             --name "$CLUSTER" \
@@ -73,7 +111,7 @@ jobs:
                        kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f - && \
                        helm upgrade --install argocd argo/argo-cd -n argocd -f argocd-values.yaml && \
                        helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack -n monitoring -f monitoring-values.yaml --timeout 10m"
-
+                       
       - name: Terraform Destroy
         if: ${{ inputs.action == 'destroy' }}
         working-directory: ${{ env.TF_DIR }}
