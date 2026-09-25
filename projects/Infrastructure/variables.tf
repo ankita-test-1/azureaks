@@ -68,6 +68,21 @@ variable "vm_size" {
   type        = string
 }
 
+variable "pod_cidr" {
+  description = "VM size for the user node pool"
+  type        = string
+}
+
+variable "service_cidr" {
+  description = "VM size for the user node pool"
+  type        = string
+}
+
+variable "dns_service_ip" {
+  description = "VM size for the user node pool"
+  type        = string
+}
+
 variable "capacity_type" {
   description = "ON_DEMAND or SPOT"
   type        = string
