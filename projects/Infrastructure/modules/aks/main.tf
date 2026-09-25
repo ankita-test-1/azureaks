@@ -5,6 +5,14 @@ resource "azurerm_private_dns_zone" "aks" {
   resource_group_name = var.resource_group_name
 }
 
+resource "time_sleep" "rbac_propagation" {
+  depends_on = [
+    azurerm_role_assignment.aks_private_dns,
+    azurerm_role_assignmen.aks_network,
+  ]
+  create_duration = "90s"
+}
+
 resource "azurerm_private_dns_zone_virtual_network_link" "aks" {
   name                  = "${var.cluster_name}-dns-link"
   resource_group_name   = var.resource_group_name
@@ -42,21 +50,22 @@ resource "azurerm_kubernetes_cluster" "aks" {
     os_disk_size_gb                = var.disk_size
     only_critical_addons_enabled  = true
     auto_scaling_enabled          = true
-    min_count                     = 1
+    min_count                     = 2
     max_count                     = 3
     zones                         = var.zones
   }
 
   network_profile {
-    network_plugin      = "azure"
-    network_plugin_mode = "overlay" # pods get IPs from an overlay CIDR, not the subnet
-    network_data_plane   = "cilium"  # Azure CNI powered by Cilium
-    outbound_type       = "userAssignedNATGateway" # matches the NAT Gateway from the vnet module
+    network_plugin      = "none"
+    pod_cidr = var.pod_cidr
+    service_cidr = var.service_cidr
+    dns_service_ip = var.dns_service_ip
+    outbound_type = "userAssignedNATGateway"
+    load_balancer_sku = "standard"
   }
 
   depends_on= [
-    azurerm_role_assignment.aks_private_dns,
-    azurerm_role_assignment.aks_network,
+    time_sleep.rbac_propagation,
   ]
 
   lifecycle {
