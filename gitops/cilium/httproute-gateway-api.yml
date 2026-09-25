@@ -3,30 +3,58 @@ kind: HTTPRoute
 metadata:
   name: boutique-frontend-route
   namespace: boutique
-spec: 
-  parentrefs:
+spec:
+  parentRefs:
     - name: boutique-gateway
+      sectionName: https
   hostnames:
-    - "aksboutique.com"
+    - "internal.aksboutique.com"
   rules:
-  - matches:
-      - path:
-          type: PathPrefix
-          value: /api
-    backendRefs:
-      - name: gateway-service
-        port: 3001
-  - matches:
-      - path:
-          type: Exact
-          value: /metrics
-    backendRefs:
-      - name: gateway-service
-        port: 3001
-  - matches:
-      - path:
-          type: PathPrefix
-          value: /
-    backendRefs:
-      - name: frontend-service
-        port: 3000
+    # Path matching precedence is defined by the Gateway API spec, not by list
+    # order: Exact beats PathPrefix, and longer prefixes beat shorter ones.
+    # So /metrics and /api win over / regardless of ordering here.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: gateway-service
+          port: 3001
+    # WARNING: this publishes Prometheus metrics on the ingress hostname with
+    # no auth. Anyone who can reach the ILB can scrape them. Prefer letting
+    # kube-prometheus-stack scrape the pod directly via a ServiceMonitor and
+    # deleting this rule.
+    - matches:
+        - path:
+            type: Exact
+            value: /metrics
+      backendRefs:
+        - name: gateway-service
+          port: 3001
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: frontend-service
+          port: 3000
+---
+# The :80 listener exists but nothing routes it, so plain HTTP requests get a
+# 404 instead of being sent to HTTPS. This closes that gap.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: boutique-https-redirect
+  namespace: boutique
+spec:
+  parentRefs:
+    - name: boutique-gateway
+      sectionName: http
+  hostnames:
+    - "internal.aksboutique.com"
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
