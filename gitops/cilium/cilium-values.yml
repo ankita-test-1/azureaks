@@ -1,0 +1,95 @@
+# =============================================================================
+# Cilium Helm values - AKS BYOCNI, private cluster, Gateway API + Hubble
+#
+#   helm upgrade --install cilium cilium/cilium \
+#     --version 1.20.2 \
+#     --namespace kube-system \
+#     -f cilium-values.yaml \
+#     --set k8sServiceHost=<terraform output api_server_private_fqdn> \
+#     --set ipam.operator.clusterPoolIPv4PodCIDRList='{10.244.0.0/16}'
+#
+# Pin the chart version. Do not track "latest" - the Gateway API CRD version
+# is coupled to the Cilium minor version (see gateway-api-crds.sh).
+# =============================================================================
+
+# --- Cilium is the CNI. AKS installed nothing. ---
+cni:
+  exclusive: true
+
+# --- Pod IPAM ---
+# AKS does not allocate pod IPs under BYOCNI. Cilium's operator owns this.
+# clusterPoolIPv4PodCIDRList MUST equal network_profile.pod_cidr in Terraform.
+ipam:
+  mode: cluster-pool
+  operator:
+    clusterPoolIPv4PodCIDRList:
+      - "10.244.0.0/16"
+    clusterPoolIPv4MaskSize: 24
+
+# Azure CNI is absent, so pod traffic is tunnelled between nodes.
+routingMode: tunnel
+tunnelProtocol: vxlan
+
+# --- kube-proxy replacement (prereq #1 for Gateway API) ---
+# Pair this with kubeProxyConfig.enabled=false in Terraform.
+# If you took the fallback path and left kube-proxy running, flip this to
+# false and set nodePort.enabled: true instead.
+kubeProxyReplacement: true
+
+# With no kube-proxy there is no ClusterIP for kubernetes.default, so the
+# agent must be told how to reach the API server directly. On a private
+# cluster this is the privatelink FQDN, NOT the public one.
+k8sServiceHost: "REPLACE-ME.privatelink.<region>.azmk8s.io"
+k8sServicePort: 443
+
+# --- L7 proxy / Envoy (prereq #2 for Gateway API) ---
+l7Proxy: true
+envoy:
+  enabled: true
+
+# Gateway traffic is handed to Envoy via TPROXY. With bpf.tproxy=false this is
+# implemented in iptables and needs the netfilter modules present on the node.
+# Azure Linux / Ubuntu AKS node images ship these, but if Gateway connections
+# hang without ever reaching Envoy, this is the first thing to check.
+bpf:
+  masquerade: true
+  # tproxy: true   # beta - removes the iptables dependency
+
+# --- Gateway API ---
+# Registers GatewayClass "cilium". CRDs must be applied BEFORE this is enabled.
+gatewayAPI:
+  enabled: true
+
+# --- Hubble (this is what ACPC would never have given you) ---
+hubble:
+  enabled: true
+  metrics:
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - port-distribution
+      - httpV2
+  relay:
+    enabled: true
+  ui:
+    enabled: true
+    # Private cluster - do NOT expose this. Reach it via:
+    #   cilium hubble ui     (port-forward)
+    ingress:
+      enabled: false
+
+# --- Operator ---
+operator:
+  replicas: 2 # requires >= 2 schedulable nodes
+  prometheus:
+    enabled: true
+
+# The system pool carries CriticalAddonsOnly=true:NoSchedule from
+# only_critical_addons_enabled. Verify the agent DaemonSet tolerates it:
+#   kubectl -n kube-system get ds cilium -o jsonpath='{.spec.template.spec.tolerations}'
+
+# --- Observability plumbing ---
+prometheus:
+  enabled: true
