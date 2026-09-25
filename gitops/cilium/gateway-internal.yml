@@ -6,7 +6,9 @@ metadata:
 spec: 
   gatewayClassName: cilium
   infrastructure:
-    annotations: service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    annotations: 
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+      service.beta.kubernetes.io/azure-load-balancer-internal-subnet: "ingress-subnet"
   listeners:
      - name: http
        protocol: HTTP
@@ -21,6 +23,7 @@ spec:
        port: 443
        hostname: "internal.aksboutique.com"
        tls:
+       mode: Terminate
          certificateRefs:
            - kind: Secret
              name: boutique-tls-cert
