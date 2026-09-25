@@ -64,3 +64,18 @@ variable "zones" {
   type    = list(string)
   default = ["1", "2", "3"]
 }
+
+variable "pod_cidr" {
+  description = "VM size for the user node pool"
+  type        = string
+}
+
+variable "service_cidr" {
+  description = "VM size for the user node pool"
+  type        = string
+}
+
+variable "dns_service_ip" {
+  description = "VM size for the user node pool"
+  type        = string
+}
