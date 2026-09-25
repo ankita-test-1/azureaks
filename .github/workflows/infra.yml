@@ -1,5 +1,4 @@
 name: Infra Up/Down
-
 on:
   workflow_dispatch:
     inputs:
@@ -9,88 +8,168 @@ on:
         type: choice
         options: [apply, destroy]
         default: apply
-
 permissions:
   id-token: write
   contents: read
-
 env:
   ARM_CLIENT_ID: 36572c9f-4e5c-4efb-bb7b-db64021e4dc0
   ARM_TENANT_ID: 89829357-4296-4e69-b714-fffa2fa6d8b1
   ARM_SUBSCRIPTION_ID: 19956185-59a5-4243-b32d-572e96134d6e
   ARM_USE_OIDC: true
   TF_DIR: projects/Infrastructure
-
 jobs:
   terraform:
     runs-on: ubuntu-latest
+    # GitHub's default shell is `bash -e {0}` - NO pipefail. With
+    # `terraform apply | tee`, tee's exit code wins and a FAILED apply passes
+    # the step. This gives every `run:` block `bash --noprofile --norc -eo pipefail`.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
-
       - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ env.ARM_CLIENT_ID }}
           tenant-id: ${{ env.ARM_TENANT_ID }}
           subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
-
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.8.0"
           terraform_wrapper: false
-
       - name: Terraform Init
         working-directory: ${{ env.TF_DIR }}
         run: terraform init
-
       - name: Terraform Apply
         if: ${{ inputs.action == 'apply' }}
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve | tee apply.log
-
       - name: Upload apply log
         if: ${{ inputs.action == 'apply' && always() }}
         uses: actions/upload-artifact@v4
         with:
           name: terraform-apply-log
-          path: ${{ env.TF_DIR }}/apply.log        
-
+          path: ${{ env.TF_DIR }}/apply.log
+      # =======================================================================
+      # Install Cilium by running helm ON AN AKS NODE via Run Command.
+      #
+      # Why not `az aks command invoke`: it schedules a pod. With no CNI every
+      # node is NotReady, so that pod stays Pending forever. Run Command goes
+      # through the Azure control plane and the VM agent instead - no pod, no
+      # cluster networking, no SSH, no inbound NSG rule.
+      #
+      # The node script is assembled INLINE below. The shebang must be the
+      # very first line of the assembled file, otherwise the VM agent runs it
+      # with /bin/sh (dash on Ubuntu) and `set -o pipefail` dies with
+      # "Illegal option -o pipefail".
+      # =======================================================================
       - name: Install Cilium via AKS node (no jumpbox)
         if: ${{ inputs.action == 'apply' }}
         working-directory: ${{ env.TF_DIR }}
         run: |
           set -euo pipefail
+          # The assembled script embeds an admin kubeconfig. Always shred it,
+          # even if a later command fails.
+          trap 'shred -u ./admin.kubeconfig ./run-on-node.sh 2>/dev/null || rm -f ./admin.kubeconfig ./run-on-node.sh' EXIT
           RG=$(terraform output -raw resource_group_name)
           CLUSTER=$(terraform output -raw cluster_name)
           NRG=$(terraform output -raw node_resource_group)
-          # Pick the SYSTEM pool VMSS - it exists before the user pool settles.
+          # System pool VMSS - it exists before the user pool settles.
           VMSS=$(az vmss list -g "$NRG" --query "[?contains(name,'system')].name | [0]" -o tsv)
-          INSTANCE=$(az vmss list-instances -g "$NRG" -n "$VMSS" \
-                       --query "[0].instanceId" -o tsv)
+          [ -n "$VMSS" ] || { echo "ERROR: no system VMSS found in $NRG"; exit 1; }
+          INSTANCE=$(az vmss list-instances -g "$NRG" -n "$VMSS" --query "[0].instanceId" -o tsv)
+          [ -n "$INSTANCE" ] || { echo "ERROR: no instances in $VMSS"; exit 1; }
           echo "Bootstrapping via $VMSS instance $INSTANCE"
           # `az aks get-credentials` is an ARM MANAGEMENT-PLANE call. It works
           # from this runner even though the cluster is private - we just
           # cannot USE the kubeconfig here, so we ship it to the node.
           az aks get-credentials -g "$RG" -n "$CLUSTER" \
             --admin --file ./admin.kubeconfig --overwrite-existing
-          # Inline the inputs rather than using --parameters, whose argv
-          # semantics for RunShellScript are fiddly.
+          # --- assemble the node script -------------------------------------
+          # Line 1 MUST be the shebang. The two base64 blobs are expanded HERE
+          # (unquoted echo); the heredoc is quoted ('NODESCRIPT') so nothing
+          # inside it is expanded by this runner - it runs verbatim on the node.
           {
+            echo '#!/bin/bash'
             echo "KUBECONFIG_B64='$(base64 -w0 ./admin.kubeconfig)'"
             echo "VALUES_B64='$(base64 -w0 cilium-values.yaml)'"
-            cat bootstrap-cilium-node.sh
+            cat <<'NODESCRIPT'
+          # ===================================================================
+          # Runs as root on an AKS node, delivered by `az vmss run-command`.
+          # KUBECONFIG_B64 and VALUES_B64 are prepended above.
+          # ===================================================================
+          set -euo pipefail
+          # Run Command only returns the LAST 4096 BYTES. Keep a full log on the
+          # node so a failure can be retrieved with a follow-up run-command:
+          #   tail -c 3500 /var/log/cilium-bootstrap.log
+          exec > >(tee -a /var/log/cilium-bootstrap.log) 2>&1
+          echo "=== cilium bootstrap $(date -Is) ==="
+          WORK=/opt/cilium-bootstrap
+          mkdir -p "$WORK" && cd "$WORK"
+          echo "$KUBECONFIG_B64" | base64 -d > kubeconfig
+          echo "$VALUES_B64"     | base64 -d > cilium-values.yaml
+          chmod 600 kubeconfig
+          export KUBECONFIG="$WORK/kubeconfig"
+          # --- tooling (AKS nodes ship neither kubectl nor helm) -------------
+          KUBECTL_VER="v1.34.0"
+          HELM_VER="v3.16.2"
+          if ! command -v kubectl >/dev/null 2>&1; then
+            curl -sSLo /usr/local/bin/kubectl \
+              "https://dl.k8s.io/release/${KUBECTL_VER}/bin/linux/amd64/kubectl"
+            chmod +x /usr/local/bin/kubectl
+          fi
+          if ! command -v helm >/dev/null 2>&1; then
+            curl -sSL "https://get.helm.sh/helm-${HELM_VER}-linux-amd64.tar.gz" | tar xz -C /tmp
+            install /tmp/linux-amd64/helm /usr/local/bin/helm
+          fi
+          # --- prove the private API server is reachable before doing work ---
+          echo "== API server reachability =="
+          kubectl version --request-timeout=30s
+          kubectl get nodes -o wide || true   # expect NotReady - that is the point
+          # --- Gateway API CRDs (must precede gatewayAPI.enabled=true) -------
+          # --server-side avoids the "metadata.annotations: Too long" failure
+          # that client-side apply hits on large CRDs.
+          GWAPI="v1.6.1"
+          BASE="https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${GWAPI}/config/crd/standard"
+          for r in gatewayclasses gateways httproutes grpcroutes \
+                   referencegrants tlsroutes backendtlspolicies; do
+            kubectl apply --server-side --force-conflicts \
+              -f "${BASE}/gateway.networking.k8s.io_${r}.yaml"
+          done
+          # --- Cilium -------------------------------------------------------
+          helm repo add cilium https://helm.cilium.io/
+          helm repo update
+          helm upgrade --install cilium cilium/cilium \
+            --version 1.20.2 \
+            --namespace kube-system \
+            -f "$WORK/cilium-values.yaml" \
+            --wait --timeout 10m
+          # --- verify -------------------------------------------------------
+          kubectl -n kube-system rollout status ds/cilium --timeout=5m
+          kubectl wait --for=condition=Ready nodes --all --timeout=5m
+          kubectl get gatewayclass cilium
+          # Do not leave an admin kubeconfig sitting on a node.
+          shred -u "$WORK/kubeconfig" 2>/dev/null || rm -f "$WORK/kubeconfig"
+          echo "DONE: Cilium installed, nodes Ready, GatewayClass registered."
+          NODESCRIPT
           } > ./run-on-node.sh
+          # Sanity-check line 1 before shipping - this is the bug that bit us.
+          head -1 ./run-on-node.sh | grep -q '^#!/bin/bash$' \
+            || { echo "ERROR: shebang is not line 1"; exit 1; }
           az vmss run-command invoke \
             -g "$NRG" -n "$VMSS" --instance-id "$INSTANCE" \
             --command-id RunShellScript \
             --scripts @./run-on-node.sh \
             -o json | tee run-command-output.json
-          rm -f ./admin.kubeconfig ./run-on-node.sh
-          # run-command returns exit code 0 even when the SCRIPT failed.
-          # Fail the step explicitly on the sentinel.
+          # run-command reports ProvisioningState/succeeded even when the
+          # SCRIPT failed. Fail the step explicitly on the sentinel.
           grep -q "DONE: Cilium installed" run-command-output.json \
-            || { echo "Bootstrap script failed - see output above"; exit 1; }
-   
+            || { echo "Bootstrap script failed - output above is the LAST 4KB only."; \
+                 echo "Retrieve the full log with:"; \
+                 echo "  az vmss run-command invoke -g $NRG -n $VMSS --instance-id $INSTANCE \\"; \
+                 echo "    --command-id RunShellScript --scripts 'tail -c 3500 /var/log/cilium-bootstrap.log'"; \
+                 exit 1; }
       # Cluster now has a working CNI, so pods can schedule and the normal
       # `command invoke` path is available again.
       - name: Bootstrap ArgoCD + monitoring
@@ -109,9 +188,9 @@ jobs:
                        helm repo update && \
                        kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f - && \
                        kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f - && \
-                       helm upgrade --install argocd argo/argo-cd -n argocd -f argocd-values.yaml && \
+                       helm upgrade --install argocd argo/argo-cd -n argocd -f argocd-values.yaml --timeout 10m && \
                        helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack -n monitoring -f monitoring-values.yaml --timeout 10m"
-                       
+  
       - name: Terraform Destroy
         if: ${{ inputs.action == 'destroy' }}
         working-directory: ${{ env.TF_DIR }}
