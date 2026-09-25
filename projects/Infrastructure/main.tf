@@ -38,7 +38,9 @@ module "aks" {
   vm_size         = var.vm_size
   node_group_name = var.node_group_name
   capacity_type   = var.capacity_type
-
+  pod_cidr = var.pod_cidr
+  service_cidr = var.service_cidr
+  dns_service_ip = var.dns_service_ip
   desired_size = var.desired_size
   min_size     = var.min_size
   max_size     = var.max_size
