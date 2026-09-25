@@ -70,9 +70,10 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   lifecycle {
     ignore_changes = [
-    default_node_pool[0].node_count,
-    network_profile[0].pod_cidr,
-  ]
+      default_node_pool[0].node_count,
+      network_profile[0].pod_cidr,
+    ]
+  }
 }
 
 locals {
