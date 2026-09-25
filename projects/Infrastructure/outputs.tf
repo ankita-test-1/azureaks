@@ -8,6 +8,10 @@ output "cluster_private_fqdn" {
   value = module.aks.cluster_private_fqdn
 }
 
+output "node_resource_group" {
+  value = module.aks.node_resource_group
+}
+
 output "acr_login_server" {
   value = module.acr.acr_login_server
 }
