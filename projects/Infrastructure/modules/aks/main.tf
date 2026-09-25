@@ -8,7 +8,7 @@ resource "azurerm_private_dns_zone" "aks" {
 resource "time_sleep" "rbac_propagation" {
   depends_on = [
     azurerm_role_assignment.aks_private_dns,
-    azurerm_role_assignmen.aks_network,
+    azurerm_role_assignment.aks_network,
   ]
   create_duration = "90s"
 }
@@ -69,7 +69,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
   ]
 
   lifecycle {
-    ignore_changes = [default_node_pool[0].node_count]
+    ignore_changes = [default_node_pool[0].node_count],
+    network_profile[0].pod_cidr
   }
 }
 
