@@ -7,7 +7,9 @@ address_space    = "10.1.0.0/16"
 node_subnet_cidr = "10.1.0.0/21" # generous even though overlay mode means pods don't consume it
 zones            = ["1", "2", "3"]
 
-
+pod_cidr       = "10.244.0.0/16" # must equal Cilium ipam.operator.clusterPoolIPv4PodCIDRList
+service_cidr   = "10.245.0.0/16"
+dns_service_ip = "10.245.0.10"   # inside service_cidr, not the .1
 cluster_name    = "aks-cluster"
 node_group_name = "userpool"
 
