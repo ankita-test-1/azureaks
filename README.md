@@ -2,31 +2,7 @@
 
 > A full end-to-end DevOps project with AIOps integration — so you can connect the dots between how AI is helping automate DevOps tasks today.
 
----
 
-## Welcome
-
-Hey everyone!
-
-Welcome to my DevOps + AI series where we build an end-to-end DevOps project with an AIOps integration.
-
-A lot of you have been asking: *"when are you going to share a full DevOps project?"*
-
-Well — here we are.
-
-In this series we will:
-
-- Build microservices locally
-- Use Claude and AI tools to assist development
-- Deploy everything step by step
-- Migrate the system to the cloud on AWS EKS
-- Set up a full CI/CD pipeline with GitHub Actions
-- Implement GitOps workflows with ArgoCD
-- Integrate AIOps capabilities with AWS Bedrock
-
-By the end of this series, you won't just know tools — you'll understand how real DevOps systems are designed and deployed.
-
----
 
 ## Repository Structure
 
@@ -37,9 +13,9 @@ DevOps-Practice-Guide/
 │   ├── part2-workflow.md          # Full workflow with AIOps (Part 2)
 │   └── claude-setup.md            # Claude Code + MCP server setup
 ├── projects/
-│   ├── README.md                  # EKS deployment guide (Part 3)
+│   ├── README.md                  # AKS deployment guide (Part 3)
 │   ├── boutique-microservices/    # The application (7 services)
-│   ├── Infrastructure/            # Terraform for AWS provisioning
+│   ├── Infrastructure/            # Terraform for AKS provisioning
 │   └── aiops-assistant/           # Bedrock Agent — Kira (Part 4)
 ├── gitops/
 │   ├── argo-cd.yml                # ArgoCD Application manifest
