@@ -10,8 +10,7 @@ stringData:
   url: https://github.com/ankita-test-1/azureaks.git
   username: argocdtoken        # any non-empty value
   password: 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
-
-
+---
 # --- Backend services -------------------------------------------------------
 apiVersion: argoproj.io/v1alpha1
 kind: Application
