@@ -1,16 +1,56 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: boutique-repo
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: git
+  url: https://github.com/ankita-test-1/azureaks.git
+  username: argocdtoken        # any non-empty value
+  password: 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      
+# --- Backend services -------------------------------------------------------
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: boutique
-  namespace: argocd
+  name: boutique-backend
+  namespace: argocd           # Application CRs MUST live in the argocd namespace
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/ankita-test-1/azureaks.git'
-    targetRevision: main
-    path: gitops/k8s
+    repoURL: https://github.com/ankita-test-1/azureaks.git
+    targetRevision: main      # the branch your CI pushes to
+    path: gitops/k8s/backend  # matches your CI's MANIFEST path
   destination:
-    server: 'https://kubernetes.default.svc'
+    server: https://kubernetes.default.svc   # Argo CD's own cluster
+    namespace: boutique
+  syncPolicy:
+    automated:
+      prune: true             # delete resources removed from git
+      selfHeal: true          # revert manual kubectl changes
+    syncOptions:
+      - CreateNamespace=true  # creates `boutique` - otherwise every sync fails
+      - ServerSideApply=true
+---
+# --- Frontend ---------------------------------------------------------------
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: boutique-frontend
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ankita-test-1/azureaks.git
+    targetRevision: main
+    path: gitops/k8s/frontend
+  destination:
+    server: https://kubernetes.default.svc
     namespace: boutique
   syncPolicy:
     automated:
@@ -18,3 +58,33 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
+---
+# --- Cilium Gateway API resources -------------------------------------------
+# Your gitops/cilium folder also needs an owner. Note this targets the
+# `boutique` namespace because the Gateway and HTTPRoutes live there.
+# The ReferenceGrant targets cert-store - Argo CD honours the namespace field
+# inside each manifest, so both land correctly.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: boutique-gateway
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ankita-test-1/azureaks.git
+    targetRevision: main
+    path: gitops/cilium
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: boutique
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
