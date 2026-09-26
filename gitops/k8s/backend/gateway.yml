@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: aksregistryshopping.azurecr.io/gateway:c5d1262191ae46affe2b6a6f6031691e5fb17faa
+          image: aksregistryshopping.azurecr.io/gateway:11cf967eadbadb66ee06aceb0338470fbcab52ab
           ports:
             - containerPort: 3001
           env:

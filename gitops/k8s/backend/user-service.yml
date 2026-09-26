@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: user-service
-          image: aksregistryshopping.azurecr.io/user-service:c5d1262191ae46affe2b6a6f6031691e5fb17faa
+          image: aksregistryshopping.azurecr.io/user-service:11cf967eadbadb66ee06aceb0338470fbcab52ab
           ports:
             - containerPort: 3006
           env:
