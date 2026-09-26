@@ -190,6 +190,32 @@ jobs:
                        kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f - && \
                        helm upgrade --install argocd argo/argo-cd -n argocd -f argocd-values.yaml --timeout 10m && \
                        helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack -n monitoring -f monitoring-values.yaml --timeout 10m"
+
+ 
+      - name: Apply ArgoCD Application manifests
+        if: ${{ inputs.action == 'apply' }}
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          set -euo pipefail
+          RG=$(terraform output -raw resource_group_name)
+          CLUSTER=$(terraform output -raw cluster_name)
+          # Inject the real PAT at runtime only - the committed gitops/argo-cd.yml
+          # must NEVER contain a real token, only a placeholder.
+          sed "s|__GITHUB_PAT__|${{ secrets.ARGOCD_REPO_PAT }}|" \
+            ../../gitops/argo-cd.yml > ./argo-cd.rendered.yml
+          az aks command invoke \
+            --resource-group "$RG" \
+            --name "$CLUSTER" \
+            --file ./argo-cd.rendered.yml \
+            --command "kubectl apply -f argo-cd.rendered.yml -n argocd" \
+            -o json | tee argocd-apply-output.json
+          # command invoke reports ProvisioningState=Succeeded even if kubectl
+          # itself errored - grep for a real success signal, same pattern as
+          # your Cilium step.
+          grep -q '"exitCode": 0' argocd-apply-output.json \
+            || { echo "kubectl apply failed - see output above"; exit 1; }
+          rm -f ./argo-cd.rendered.yml
+                      
   
       - name: Terraform Destroy
         if: ${{ inputs.action == 'destroy' }}
