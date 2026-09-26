@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: auth
-          image: aksregistryshopping.azurecr.io/auth:11cf967eadbadb66ee06aceb0338470fbcab52ab
+          image: aksregistryshopping.azurecr.io/auth:6422bd63768fe0842686acd7f62cf127ef635146
           ports:
             - containerPort: 3002
           env:
