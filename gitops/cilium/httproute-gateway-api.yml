@@ -18,7 +18,7 @@ spec:
             type: PathPrefix
             value: /api
       backendRefs:
-        - name: gateway-service
+        - name: gateway
           port: 3001
     # WARNING: this publishes Prometheus metrics on the ingress hostname with
     # no auth. Anyone who can reach the ILB can scrape them. Prefer letting
@@ -29,14 +29,14 @@ spec:
             type: Exact
             value: /metrics
       backendRefs:
-        - name: gateway-service
+        - name: gateway
           port: 3001
     - matches:
         - path:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: frontend-service
+        - name: frontend
           port: 3000
 ---
 # The :80 listener exists but nothing routes it, so plain HTTP requests get a
