@@ -1,17 +1,10 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: boutique-db-restore
+  name: boutique-db-dump
   namespace: boutique
-spec:
-  backoffLimit: 3
-  template:
-    spec:
-      restartPolicy: OnFailure
-      containers:
-        - name: restore
-          image: postgres:15-alpine
-          command:
+data:
+  boutique_full.sql: |
             - sh
             - -c
             - |
