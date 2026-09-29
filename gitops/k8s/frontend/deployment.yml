@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: aksregistryshopping.azurecr.io/frontend:6422bd63768fe0842686acd7f62cf127ef635146
+          image: aksregistryshopping.azurecr.io/frontend:1f23cc60abd5464a3a8955c1f6a001cbbc678c39
           ports:
             - containerPort: 3000
           env:
