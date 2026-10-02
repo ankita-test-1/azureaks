@@ -47,10 +47,14 @@ DevOps-Practice-Guide/
 │   ├── boutique-microservices/    # The application (7 services)
 │   ├── Infrastructure/            # Terraform: VNet, private AKS, ACR, Cilium
 │   └── aiops-assistant/           # AIOps agent — Kira (Part 4)
+├── cilium/                        # Cilium configuration (see cilium/README.md)
+│   ├── values.yaml                # Cilium Helm values (Gateway API, Hubble, etc.)
+│   ├── network-policies/          # CiliumNetworkPolicy / NetworkPolicy manifests
+│   └── gateway/                   # GatewayClass, Gateway and HTTPRoute resources
 ├── gitops/
 │   ├── argo-cd.yml                # ArgoCD Application manifest
 │   ├── kustomization.yml          # Kustomize entry point
-│   └── k8s/                       # Kubernetes manifests (incl. Gateway API resources)
+│   └── k8s/                       # Application Kubernetes manifests
 └── .github/
     └── workflows/ci.yml           # GitHub Actions CI pipeline
 ```
@@ -133,6 +137,20 @@ Then we actually build the project. You'll see:
 
 ---
 
+### Cilium — Networking, Network Policy and Gateway API
+
+[`cilium/`](https://github.com/ankita-test-1/azureaks/tree/main/cilium)
+
+The `cilium/` folder holds everything related to cluster networking, kept separate from the application manifests in `gitops/`:
+
+- Cilium Helm values (dataplane, Gateway API support, Hubble)
+- Network policies that lock down traffic between the boutique services
+- Gateway API resources (`GatewayClass`, `Gateway`, `HTTPRoute`) for external traffic
+
+Apply this **after** the AKS cluster is provisioned and **before** deploying the application, since the Gateway and policies must exist for traffic to flow.
+
+---
+
 ### Part 4 — AIOps Integration
 
 [`projects/aiops-assistant/README.md`](https://github.com/ankita-test-1/azureaks/blob/main/projects/aiops-assistant/README.md)
@@ -163,6 +181,7 @@ Because modern DevOps is no longer just automation — it's **automation + intel
 
 > Adjust any row that does not match your implementation.
 
+---
 
 ## Tech Stack
 
