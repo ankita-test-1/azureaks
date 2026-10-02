@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: orders
-          image: aksregistryshopping.azurecr.io/orders:df7d4244d83ae2240691e6e089b9c574a7bfdef0
+          image: aksregistryshopping.azurecr.io/orders:47f5b637c5da2924ede3c19cacbe6169ebccfc41
           ports:
             - containerPort: 3005
           env:
