@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: boutique-prod
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/rathar1/azureaks.git
+    targetRevision: main
+    path: charts/boutique
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: boutique-prod
+  syncPolicy:
+    # keep prod MANUAL at first - automated sync on prod is a deliberate
+    # later decision, and "why we didn't auto-sync prod day 1" is a good
+    # interview answer in itself.
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
