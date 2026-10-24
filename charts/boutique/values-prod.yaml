@@ -1,0 +1,32 @@
+imageTag: latest
+
+services:
+  - name: gateway
+    port: 3001
+    replicas: 2
+  - name: auth
+    port: 3002
+    replicas: 2
+  - name: product-service
+    port: 3003
+    replicas: 2
+  - name: order-service
+    port: 3004
+    replicas: 2
+  - name: orders
+    port: 3005
+    replicas: 2
+  - name: user-service
+    port: 3006
+    replicas: 2
+  - name: frontend
+    port: 3000
+    replicas: 2
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
