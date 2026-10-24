@@ -1,0 +1,14 @@
+{{- if eq .Values.color "blue" }}
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gateway-to-boutique
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: {{ .Values.gateway.namespace }}
+  to:
+    - group: ""
+      kind: Service
+{{- end }}
