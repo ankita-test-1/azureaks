@@ -69,7 +69,7 @@ spec:
   source:
     repoURL: https://github.com/ankita-test-1/azureaks.git
     targetRevision: main
-    path: gitops/cilium
+    path: gitops/infra
   destination:
     server: https://kubernetes.default.svc
     namespace: boutique
