@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: boutique-locales
+  namespace: argocd
+spec:
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - locale: en-us
+                - locale: de-de
+                - locale: ar-sa
+          - list:
+              elements:
+                - color: blue
+                - color: green
+  template:
+    metadata:
+      name: 'boutique-{{locale}}-{{color}}'
+      annotations:
+        argocd.argoproj.io/sync-wave: "10"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/ankita-test-1/azureaks.git
+        targetRevision: main
+        path: charts/boutique
+        helm:
+          valueFiles:
+            - values.yaml
+          parameters:
+            - name: locale
+              value: '{{locale}}'
+            - name: color
+              value: '{{color}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'boutique-{{locale}}'
+      syncPolicy:
+        automated: { prune: true, selfHeal: true }
+        syncOptions: [CreateNamespace=true]
