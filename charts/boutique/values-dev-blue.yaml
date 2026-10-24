@@ -1,0 +1,5 @@
+color: blue
+traffic:
+  blue: 100
+  green: 0
+replicaCount: 1
