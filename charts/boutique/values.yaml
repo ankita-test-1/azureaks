@@ -1,9 +1,29 @@
-# Base values - shared defaults for every environment.
-# Env-specific overrides live in values-dev.yaml / values-prod.yaml.
+# Base values shared by every locale and colour.
+# The ApplicationSet overrides `locale` and `color` per generated Application.
 
-namespace: boutique
+# --- identity (overridden by ApplicationSet parameters) ---------------------
+locale: en-us
+color: blue
+
+# --- traffic split ----------------------------------------------------------
+# Only read from the BLUE release - blue owns the HTTPRoute for its locale.
+# This is the cutover switch: flip to blue:0 / green:100 to shift traffic.
+traffic:
+  blue: 100
+  green: 0
+
+# --- gateway ----------------------------------------------------------------
+gateway:
+  name: gateway-api
+  namespace: gateway-api
+domain: internal.aksboutique.com
+
+# --- images -----------------------------------------------------------------
 imageRegistry: aksregistryshopping.azurecr.io
 imageTag: latest   # overwritten by CI on every build
+
+# Which service receives external traffic for the locale hostname.
+publicService: frontend
 
 services:
   - name: gateway
