@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/ankita-test-1/azureaks.git
     targetRevision: main
-    path: gitops/infra/gateway-api
+    path: gitops/infra
   destination:
     server: https://kubernetes.default.svc
     namespace: gateway-api
