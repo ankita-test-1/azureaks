@@ -3,19 +3,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $svc.name }}
-  namespace: {{ $.Values.namespace }}
+  # Colour suffix keeps blue and green from overwriting each other.
+  name: {{ $svc.name }}-{{ $.Values.color }}
   labels:
     app: {{ $svc.name }}
+    color: {{ $.Values.color }}
+    locale: {{ $.Values.locale }}
+    app.kubernetes.io/part-of: boutique
 spec:
   replicas: {{ $svc.replicas }}
   selector:
     matchLabels:
       app: {{ $svc.name }}
+      color: {{ $.Values.color }}
   template:
     metadata:
       labels:
         app: {{ $svc.name }}
+        color: {{ $.Values.color }}
+        locale: {{ $.Values.locale }}
     spec:
       containers:
         - name: {{ $svc.name }}
@@ -23,6 +29,11 @@ spec:
           ports:
             - containerPort: {{ $svc.port }}
               name: http
+          env:
+            - name: LOCALE
+              value: {{ $.Values.locale | quote }}
+            - name: COLOR
+              value: {{ $.Values.color | quote }}
           resources:
             {{- toYaml $.Values.resources | nindent 12 }}
           readinessProbe:
